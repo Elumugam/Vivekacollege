@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js build outputs
+client/.next/
+client/out/
+client/build/
+
+# Environment variables
+.env
+.env*.local
+*.env
+*.env.bak
+.env.bak
+
+# Logs
+*.log
+client-dev.err.log
+client-dev.out.log
+dev-server.err.log
+dev-server.log
+dev-server.out.log
+gateway.err.log
+gateway.out.log
+ngrok.err.log
+ngrok.out.log
+server-dev.err.log
+server-dev.out.log
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temporary html dumps
+tmp_homepage*.html
