@@ -58,20 +58,22 @@ export default function AnnouncementBar({ slot = 'top' }: { slot?: 'top' | 'hero
   };
 
   return (
-    <div className="bg-maroon text-white relative z-60">
+    <div className="bg-maroon text-white relative z-60" style={{ overflow: 'hidden' }}>
       <div className="w-full py-2">
-        <div className="container mx-auto px-6 flex items-center justify-between min-h-10">
-          <div className="flex items-center gap-4 overflow-hidden w-full">
-            <span className="bg-white text-maroon text-[10px] font-bold px-2 py-0.5 rounded-sm whitespace-nowrap hidden sm:inline-block">LATEST NEWS</span>
-            <div className="overflow-hidden flex-1">
+        <div className="flex items-center justify-between min-h-10 px-4">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <span className="bg-white text-maroon text-[10px] font-bold px-2 py-0.5 rounded-sm whitespace-nowrap hidden sm:inline-block flex-shrink-0">LATEST NEWS</span>
+            <div
+              className="flex-1 min-w-0"
+              style={{ overflow: 'hidden' }}
+              onMouseEnter={(e) => { if (pauseOnHover) { const el = (e.currentTarget as HTMLElement).querySelector('.marquee-inner') as HTMLElement; if (el) el.style.animationPlayState = 'paused'; } }}
+              onMouseLeave={(e) => { if (pauseOnHover) { const el = (e.currentTarget as HTMLElement).querySelector('.marquee-inner') as HTMLElement; if (el) el.style.animationPlayState = 'running'; } }}
+            >
               <div
-                onMouseEnter={(e) => { if (pauseOnHover) { const el = (e.currentTarget as HTMLElement).querySelector('.marquee-inner') as HTMLElement; if (el) el.style.animationPlayState = 'paused'; } }}
-                onMouseLeave={(e) => { if (pauseOnHover) { const el = (e.currentTarget as HTMLElement).querySelector('.marquee-inner') as HTMLElement; if (el) el.style.animationPlayState = 'running'; } }}
-                className="whitespace-nowrap text-sm font-medium"
+                className="marquee-inner whitespace-nowrap text-sm font-medium"
+                style={{ display: 'inline-block', paddingLeft: '100vw', willChange: 'transform', animation: `marquee ${speed}s linear infinite` }}
               >
-                <div className="marquee-inner" style={{ display: 'inline-block', paddingLeft: '100%', willChange: 'transform', animation: `marquee ${speed}s linear infinite` }}>
-                  {items.filter(it => it.enabled).map(renderItemNode)}
-                </div>
+                {items.filter(it => it.enabled).map(renderItemNode)}
               </div>
             </div>
           </div>
@@ -79,7 +81,7 @@ export default function AnnouncementBar({ slot = 'top' }: { slot?: 'top' | 'hero
           <button
             suppressHydrationWarning
             onClick={() => setIsVisible(false)}
-            className="ml-4 p-1 hover:bg-white/10 rounded-full transition-colors shrink-0"
+            className="ml-3 p-1 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
             aria-label="Close announcement"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,7 +93,7 @@ export default function AnnouncementBar({ slot = 'top' }: { slot?: 'top' | 'hero
 
       <style jsx>{`
         @keyframes marquee {
-          0% { transform: translateX(0%); }
+          0% { transform: translateX(0); }
           100% { transform: translateX(-100%); }
         }
         .marquee-inner { animation-play-state: running; }
