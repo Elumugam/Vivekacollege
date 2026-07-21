@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { toast } from "react-hot-toast";
 import { apiJson } from "@/lib/api";
 import { inp, ta, Field, SaveBtn, UploadBtn, MediaPreview, SectionHeader } from "./CmsHelpers";
 

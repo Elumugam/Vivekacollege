@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const [homeResponse, coursesResponse, mediaResponse] = await Promise.all([
-    fetchPublicJson<{ content?: any }>("/content/home"),
+    fetchPublicJson<{ content?: any; updated_at?: string; updatedAt?: string }>("/content/home"),
     fetchPublicJson<any[]>("/courses"),
     fetchPublicJson<any[]>("/media?page=home&section=about-the-university"),
   ]);

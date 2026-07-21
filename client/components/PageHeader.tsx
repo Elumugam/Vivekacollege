@@ -67,9 +67,9 @@ const PageHeader = ({ eyebrow, title, description, actionLabel, actionHref, hero
       <div className="absolute inset-0 z-0">
         {mediaUrl ? (
           String(mediaType || '').toLowerCase() === 'video' || /\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl) ? (
-            <video src={mediaUrl} autoPlay={videoAutoplay} muted={videoMuted} loop={videoLoop} playsInline controls={false} preload="auto" style={{ objectFit }} className="h-full w-full absolute inset-0" />
+            <video src={mediaUrl} autoPlay={videoAutoplay} muted={videoMuted} loop={videoLoop} playsInline controls={false} preload="auto" style={{ objectFit: objectFit as any }} className="h-full w-full absolute inset-0" />
           ) : (
-            <div className="absolute inset-0" style={{ backgroundImage: `url("${mediaUrl}")`, backgroundSize: objectFit, backgroundPosition: 'center' }} />
+            <div className="absolute inset-0" style={{ backgroundImage: `url("${mediaUrl}")`, backgroundSize: objectFit as any, backgroundPosition: 'center' }} />
           )
         ) : null}
         <div className="absolute inset-0" style={{ backgroundColor: `rgba(3,9,18,${overlayEnabled ? overlayOpacity : 0})` }} />

@@ -100,7 +100,7 @@ export default function PageSections({ token }: { token: string | null }) {
               additionalDescription: aboutUniversity.additionalDescription,
               cta1Text: aboutUniversity.buttonText,
               cta1Url: aboutUniversity.buttonLink,
-              mediaUrl: (aboutUniversity.mediaUrl ?? aboutUniversity.media_url) || homeContent.mediaUrl || '',
+              mediaUrl: (aboutUniversity.mediaUrl ?? (aboutUniversity as any).media_url) || homeContent.mediaUrl || '',
               mediaType: aboutUniversity.mediaType || homeContent.mediaType || '',
               mediaSettings: aboutUniversity.mediaSettings || homeContent.mediaSettings || {},
               quoteEnabled: aboutUniversity.quoteEnabled ?? homeContent.quoteEnabled ?? true,
