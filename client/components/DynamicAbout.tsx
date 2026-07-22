@@ -1,15 +1,17 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { fetchPublicJson, apiJson } from "@/lib/api";
-import { findAssignedMedia } from "@/lib/media";
+import { fetchPublicJson } from "@/lib/api";
+import { findAssignedMedia, resolveMediaUrl } from "@/lib/media";
 
 export default function DynamicAbout() {
   const [homeContent, setHomeContent] = useState<any>(null);
   const [mediaAsset, setMediaAsset] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [imgError, setImgError] = useState(false);
 
   const load = async () => {
     setLoading(true);
+    setImgError(false);
     try {
       const [homeResp, mediaResp] = await Promise.all([
         fetchPublicJson<any>('/content/home'),
@@ -41,20 +43,23 @@ export default function DynamicAbout() {
   }
 
   const content = homeContent || {};
-  const mediaUrl = content.mediaUrl || mediaAsset?.url || '/collegeimage.png';
+  const rawMediaUrl = content.mediaUrl || content.image_url || content.media_url || content.image || mediaAsset?.url || mediaAsset?.path || '/collegeimage.png';
+  const resolvedUrl = resolveMediaUrl(rawMediaUrl);
   const version = content.updated_at || content.updatedAt || mediaAsset?.created_at || Date.now();
-  const displayUrl = `${mediaUrl}${mediaUrl.includes('?') ? '&' : '?'}v=${encodeURIComponent(String(version))}`;
-  const mediaType = (content.mediaType || content.media_type) || (mediaAsset?.media_type || (/\.(mp4|webm|mov)(\?|$)/i.test(mediaUrl) ? 'video' : 'image'));
+  const displayUrl = imgError
+    ? '/collegeimage.png'
+    : (resolvedUrl.startsWith('data:') ? resolvedUrl : `${resolvedUrl}${resolvedUrl.includes('?') ? '&' : '?'}v=${encodeURIComponent(String(version))}`);
+  const mediaType = (content.mediaType || content.media_type) || (mediaAsset?.media_type || (/\.(mp4|webm|mov)(\?|$)/i.test(resolvedUrl) ? 'video' : 'image'));
 
   // Render only the left column (media + quote) so this component can be mounted inside
   // the existing server-rendered layout without duplicating text content.
   return (
     <div className="relative">
       <div className="aspect-4/5 bg-cream rounded-sm overflow-hidden shadow-2xl">
-        {mediaType === 'video' ? (
-          <video src={displayUrl} autoPlay muted loop playsInline controls={false} preload="auto" className="w-full h-full object-cover" />
+        {mediaType === 'video' && !imgError ? (
+          <video src={displayUrl} autoPlay muted loop playsInline controls={false} preload="auto" className="w-full h-full object-cover" onError={() => setImgError(true)} />
         ) : (
-          <img src={displayUrl} alt="Homepage media" loading="lazy" className="w-full h-full object-cover" />
+          <img src={displayUrl} alt="Homepage media" loading="lazy" className="w-full h-full object-cover" onError={() => setImgError(true)} />
         )}
       </div>
       {content.quoteEnabled !== false && (

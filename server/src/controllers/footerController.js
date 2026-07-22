@@ -51,7 +51,18 @@ const getFooter = async (req, res, next) => {
     }
 };
 
-// ─── PUT /api/footer/content ──────────────────────────────────────────────────
+// ─── GET & PUT /api/footer/content ─────────────────────────────────────────────
+const getFooterContent = async (req, res, next) => {
+    try {
+        const supabase = getSupabaseAdminClient();
+        if (!supabase) return res.json(defaultContent());
+        const content = await readKey(supabase, KEY_CONTENT);
+        res.json(content || defaultContent());
+    } catch (error) {
+        next(error);
+    }
+};
+
 const saveFooterContent = async (req, res, next) => {
     try {
         const supabase = getSupabaseAdminClient();
@@ -203,6 +214,7 @@ const buildDefaultFooter = () => ({
 
 module.exports = {
     getFooter,
+    getFooterContent,
     saveFooterContent,
     getQuickLinks,
     saveQuickLinks,

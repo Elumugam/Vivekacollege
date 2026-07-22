@@ -95,3 +95,36 @@ export const findAssignedMedia = <T extends MediaAsset>(items: T[] | null | unde
     .filter((item) => item.page_name === pageName && item.section_name === sectionName)
     .sort((left, right) => new Date(right.created_at || 0).getTime() - new Date(left.created_at || 0).getTime())[0] || null;
 };
+
+export const resolveMediaUrl = (rawUrl?: string | null): string => {
+  if (!rawUrl || typeof rawUrl !== 'string') return '/collegeimage.png';
+  let value = rawUrl.trim();
+  if (!value || value === 'null' || value === 'undefined' || value === '[object Object]') {
+    return '/collegeimage.png';
+  }
+
+  if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:')) {
+    return value;
+  }
+
+  if (value.startsWith('/uploads/') || value.startsWith('uploads/')) {
+    const cleanPath = value.startsWith('/') ? value : `/${value}`;
+    const apiBase = String(process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
+    if (apiBase && /^https?:\/\//i.test(apiBase)) {
+      return `${apiBase}${cleanPath}`;
+    }
+    return cleanPath;
+  }
+
+  if (value.startsWith('/')) {
+    return value;
+  }
+
+  const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
+  if (supabaseUrl) {
+    const bucket = value.includes('/') ? '' : 'cms-media/';
+    return `${supabaseUrl}/storage/v1/object/public/${bucket}${value.replace(/^\/+/, '')}`;
+  }
+
+  return `/${value}`;
+};

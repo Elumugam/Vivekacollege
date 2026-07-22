@@ -2,6 +2,7 @@ const express = require('express');
 const { protect } = require('../middleware/authMiddleware');
 const {
     getFooter,
+    getFooterContent,
     saveFooterContent,
     getQuickLinks,
     saveQuickLinks,
@@ -16,7 +17,8 @@ const router = express.Router();
 // Public endpoint – frontend fetches all footer data in one call
 router.get('/', getFooter);
 
-// Protected admin endpoints
+// Footer content endpoints
+router.get('/content', getFooterContent);
 router.put('/content', protect, saveFooterContent);
 
 router.get('/quick-links', getQuickLinks);
