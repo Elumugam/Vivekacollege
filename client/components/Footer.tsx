@@ -134,7 +134,7 @@ const Footer = () => {
 
   const year = new Date().getFullYear();
   const copyrightText =
-    content.copyright || `© ${year} ${content.collegeName || "Viveka College"}. All rights reserved.`;
+    content.copyright || `© 2026 ${content.collegeName || "Viveka College"}. All Rights Reserved.`;
 
   return (
     <footer className="bg-navy-dark text-white pt-16 pb-8">
@@ -242,14 +242,17 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-cream/10 pt-8 flex flex-col md:row justify-between items-center gap-4 text-[12px] text-cream/40">
+        <div className="border-t border-cream/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-[12px] text-cream/40">
           <p>{copyrightText}</p>
-          <div className="flex gap-6">
-            <Link href="/admin/login" className="hover:text-cream transition-colors">
-              Admin Login
-            </Link>
+          <div className="flex flex-wrap gap-6">
             <Link href="/sitemap.xml" className="hover:text-cream transition-colors">
               Sitemap
+            </Link>
+            <Link href="/privacy" className="hover:text-cream transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:text-cream transition-colors">
+              Terms of Use
             </Link>
             <Link href="/contact" className="hover:text-cream transition-colors">
               Support
