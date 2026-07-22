@@ -7,7 +7,7 @@ const token = jwt.sign(
   { expiresIn: '1h' }
 );
 
-const API_BASE = 'http://127.0.0.1:5000/api';
+const API_BASE = process.env.API_BASE_URL || 'http://127.0.0.1:5000/api';
 
 async function runTests() {
   console.log('=== STARTING ABOUT THE UNIVERSITY CMS VERIFICATION TESTS ===\n');

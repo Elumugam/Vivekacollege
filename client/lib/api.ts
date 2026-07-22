@@ -1,8 +1,23 @@
-export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api").replace(/\/$/, "");
+const getBaseApiUrl = () => {
+    const raw = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "/api").trim().replace(/\/$/, "");
+    if (!raw) return "/api";
+    if (raw.startsWith("/")) {
+        return raw.endsWith("/api") ? raw : `${raw}/api`;
+    }
+    return raw.endsWith("/api") ? raw : `${raw}/api`;
+};
+
+export const API_URL = getBaseApiUrl();
 
 const DEFAULT_TIMEOUT_MS = 3000;
 
-const buildApiUrl = (path: string) => `${API_URL}${path.startsWith("/") ? path : `/${path}`}`;
+const buildApiUrl = (path: string) => {
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    if (cleanPath.startsWith("/api/") && API_URL.endsWith("/api")) {
+        return `${API_URL.slice(0, -4)}${cleanPath}`;
+    }
+    return `${API_URL}${cleanPath}`;
+};
 
 export const apiRequest = async (path: string, init: RequestInit = {}, timeoutMs = DEFAULT_TIMEOUT_MS) => {
     const controller = new AbortController();
@@ -89,7 +104,7 @@ export const getCourses = async () => {
     const controller = new AbortController();
     const timeoutId = globalThis.setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
     try {
-        const res = await fetch(`${API_URL}/courses`, { 
+        const res = await fetch(buildApiUrl('/courses'), { 
             cache: 'no-store',
             signal: controller.signal
         });
@@ -107,7 +122,7 @@ export const getCourseById = async (id: string) => {
     const controller = new AbortController();
     const timeoutId = globalThis.setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
     try {
-        const res = await fetch(`${API_URL}/courses/slug/${id}`, { 
+        const res = await fetch(buildApiUrl(`/courses/slug/${id}`), { 
             cache: 'no-store',
             signal: controller.signal
         });

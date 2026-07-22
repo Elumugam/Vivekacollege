@@ -12,8 +12,8 @@ export default function DynamicAbout() {
     setLoading(true);
     try {
       const [homeResp, mediaResp] = await Promise.all([
-        fetch('/api/content/home').then((r) => r.ok ? r.json().catch(() => null) : null).catch(() => null),
-        fetch('/api/media?page=home&section=about-the-university').then((r) => r.ok ? r.json().catch(() => []) : []).catch(() => []),
+        fetchPublicJson<any>('/content/home'),
+        fetchPublicJson<any[]>('/media?page=home&section=about-the-university'),
       ]);
 
       const home = homeResp?.content || (homeResp?.content === undefined ? null : homeResp);
