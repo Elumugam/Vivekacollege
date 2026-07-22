@@ -17,7 +17,7 @@ app.use(cors(clientUrl ? { origin: clientUrl, credentials: true } : { origin: tr
 app.use((req, res, next) => {
     // Give upload routes more time
     const isUpload = req.path.startsWith('/api/upload');
-    const timeoutMs = isUpload ? 60000 : 8000;
+    const timeoutMs = isUpload ? 60000 : 15000;
     req.setTimeout(timeoutMs, () => {
         const err = new Error('Request Timeout');
         err.status = 408;

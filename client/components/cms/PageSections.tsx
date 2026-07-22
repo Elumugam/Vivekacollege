@@ -17,15 +17,15 @@ export default function PageSections({ token }: { token: string | null }) {
     String(section.section_name || '').toLowerCase() === 'about the university';
 
   const normalizeAboutUniversityContent = (content: any) => ({
-    smallHeading: String(content?.smallHeading || content?.small_heading || 'ABOUT THE UNIVERSITY'),
-    mainHeading: String(content?.mainHeading || content?.main_heading || 'Viveka College — Flexible, Recognized, Career-Focused'),
+    smallHeading: String(content?.smallHeading || content?.small_heading || content?.title || 'ABOUT THE UNIVERSITY'),
+    mainHeading: String(content?.mainHeading || content?.main_heading || content?.subtitle || 'Viveka College — Flexible, Recognized, Career-Focused'),
     description: String(content?.description || ''),
     additionalDescription: String(content?.additionalDescription || content?.additional_description || ''),
-    buttonText: String(content?.buttonText || content?.button_text || 'Learn More About Us'),
-    buttonLink: String(content?.buttonLink || content?.button_link || '/about'),
+    buttonText: String(content?.buttonText || content?.button_text || content?.cta1Text || 'Learn More About Us'),
+    buttonLink: String(content?.buttonLink || content?.button_link || content?.cta1Url || '/about'),
     // Media management defaults
     mediaType: String(content?.mediaType || content?.media_type || 'image'),
-    mediaUrl: String(content?.mediaUrl || content?.media_url || ''),
+    mediaUrl: String(content?.mediaUrl || content?.media_url || content?.image_url || ''),
     mediaSettings: content?.mediaSettings || content?.media_settings || {},
     // Quote card defaults
     quoteEnabled: content?.quoteEnabled ?? (content?.quote_enabled ?? true),
@@ -115,7 +115,7 @@ export default function PageSections({ token }: { token: string | null }) {
 
       toast.success('Saved');
       try { if (typeof window !== 'undefined' && window.localStorage) window.localStorage.setItem('home_content_update', JSON.stringify({ ts: Date.now() })); } catch (e) { }
-      setSections((current) => current.map((item) => item.id === section.id ? { ...item, ...next, id: next.id, contentText: typeof next.content === 'string' ? next.content : JSON.stringify(next.content || {}, null, 2) } : item));
+      setSections((current) => current.map((item) => item.id === section.id ? { ...item, ...next, id: next.id, content: next.content, aboutContent: isHomeAboutUniversity(next) ? normalizeAboutUniversityContent(next.content) : undefined, contentText: typeof next.content === 'string' ? next.content : JSON.stringify(next.content || {}, null, 2) } : item));
       setEditingId(null);
     } catch (err: any) {
       toast.error(err.message || 'Save failed');

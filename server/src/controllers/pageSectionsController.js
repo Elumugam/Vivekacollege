@@ -58,7 +58,10 @@ const readSectionFallback = async (supabase, key) => {
   const { data, error } = await supabase.from('website_content').select('*').eq('key', key).maybeSingle();
   if (error) throw error;
   if (!data || !data.content) return null;
-  const content = data.content;
+  let content = data.content;
+  if (typeof content === 'string') {
+    try { content = JSON.parse(content); } catch (e) { content = {}; }
+  }
   return {
     id: key,
     page_name: content.page_name || '',
@@ -124,15 +127,43 @@ const getPageSections = async (req, res, next) => {
     const supabase = getSupabaseAdminClient();
     if (!supabase) return res.json(buildFallbackRows());
 
-    const { data, error } = await supabase.from('page_sections').select('*').order('updated_at', { ascending: false });
-    if (error) {
-      if (isSupabaseUnauthorizedError(error)) return res.status(503).json({ message: 'Supabase API key invalid or unauthorized. Check server/.env' });
-      if (isMissingTableError(error)) return res.json(buildFallbackRows());
-      throw error;
+    let psRows = [];
+    const { data: psData, error: psError } = await supabase.from('page_sections').select('*').order('updated_at', { ascending: false });
+    if (psError) {
+      if (isSupabaseUnauthorizedError(psError)) return res.status(503).json({ message: 'Supabase API key invalid or unauthorized. Check server/.env' });
+      if (!isMissingTableError(psError)) throw psError;
+    } else if (Array.isArray(psData)) {
+      psRows = psData.map(normalizeRow);
     }
 
-    const rows = Array.isArray(data) && data.length > 0 ? mergeWithDefaults(data.map(normalizeRow)) : buildFallbackRows();
-    res.json(rows.map(toDisplay));
+    let wcRows = [];
+    try {
+      const { data: wcData } = await supabase.from('website_content').select('*').like('key', 'page_section:%');
+      if (Array.isArray(wcData)) {
+        wcRows = wcData.map((row) => {
+          let content = row.content || {};
+          if (typeof content === 'string') {
+            try { content = JSON.parse(content); } catch (e) { content = {}; }
+          }
+          return {
+            id: row.key,
+            page_name: content.page_name || '',
+            section_name: content.section_name || '',
+            title: content.title || '',
+            content: content.content ?? content,
+            image_url: content.image_url || '',
+            previous_data: content.previous_data || null,
+            updated_at: content.updated_at || row.updated_at || row.created_at || null,
+            created_at: row.created_at || null,
+          };
+        });
+      }
+    } catch (e) {
+      /* ignore fallback error */
+    }
+
+    const allRows = mergeWithDefaults([...psRows, ...wcRows]);
+    res.json(allRows.map(toDisplay));
   } catch (error) {
     next(error);
   }
@@ -147,49 +178,114 @@ const savePageSection = async (req, res, next) => {
     const fallbackMeta = getFallbackMetaById(id);
     const isFallbackId = !!fallbackMeta || String(id || '').startsWith('page_section:') || !isNumericId(id);
 
-    let previous = null;
-    if (!isFallbackId) {
-      const existing = await supabase.from('page_sections').select('*').eq('id', id).maybeSingle();
-      if (existing.error && !isMissingTableError(existing.error)) throw existing.error;
-      previous = existing.data ? normalizeRow(existing.data) : null;
-    }
-    // Normalize content: accept JSON string or object
     let contentValue = req.body.content ?? {};
     if (typeof contentValue === 'string') {
-      try { contentValue = JSON.parse(contentValue); } catch (e) { /* keep string when not JSON */ }
+      try { contentValue = JSON.parse(contentValue); } catch (e) { /* keep string */ }
     }
 
     const resolvedPageName = req.body.page_name || fallbackMeta?.page_name || '';
     const resolvedSectionName = req.body.section_name || fallbackMeta?.section_name || '';
+    const resolvedImageUrl = req.body.image_url || (typeof contentValue === 'object' ? (contentValue.mediaUrl || contentValue.image_url || '') : '');
+
+    let existingInPs = null;
+    try {
+      if (!isFallbackId) {
+        const { data } = await supabase.from('page_sections').select('*').eq('id', id).maybeSingle();
+        if (data) existingInPs = normalizeRow(data);
+      }
+      if (!existingInPs && resolvedPageName && resolvedSectionName) {
+        const { data } = await supabase.from('page_sections').select('*').eq('page_name', resolvedPageName).eq('section_name', resolvedSectionName).maybeSingle();
+        if (data) existingInPs = normalizeRow(data);
+      }
+    } catch (e) {
+      /* ignore */
+    }
+
+    const previousData = existingInPs ? {
+      page_name: existingInPs.page_name,
+      section_name: existingInPs.section_name,
+      title: existingInPs.title,
+      content: existingInPs.content,
+      image_url: existingInPs.image_url,
+      updated_at: existingInPs.updated_at
+    } : (req.body.previous_data || null);
+
     const rowPayload = {
       page_name: resolvedPageName,
       section_name: resolvedSectionName,
       title: req.body.title || '',
       content: contentValue,
-      image_url: req.body.image_url || '',
-      previous_data: previous ? { page_name: previous.page_name, section_name: previous.section_name, title: previous.title, content: previous.content, image_url: previous.image_url, updated_at: previous.updated_at } : null,
+      image_url: resolvedImageUrl,
+      previous_data: previousData,
       updated_at: new Date().toISOString(),
     };
 
-    if (isFallbackId) {
+    let savedResult = null;
+
+    if (existingInPs?.id || (id && isNumericId(id))) {
+      const targetId = existingInPs?.id || id;
+      const { data, error } = await supabase.from('page_sections').upsert({ id: targetId, ...rowPayload }, { onConflict: 'id' }).select('*').single();
+      if (!error && data) {
+        savedResult = normalizeRow(data);
+      }
+    }
+
+    if (!savedResult && resolvedPageName && resolvedSectionName) {
+      try {
+        const { data, error } = await supabase.from('page_sections').insert(rowPayload).select('*').single();
+        if (!error && data) {
+          savedResult = normalizeRow(data);
+        }
+      } catch (err) {
+        /* fallback to website_content if insert fails */
+      }
+    }
+
+    if (!savedResult) {
       const sectionKey = String(id || '').startsWith('page_section:')
         ? String(id)
         : buildSectionKey(resolvedPageName, resolvedSectionName);
       const existingFallback = await readSectionFallback(supabase, sectionKey);
-      const saved = await saveSectionFallback(
+      savedResult = await saveSectionFallback(
         supabase,
         sectionKey,
         rowPayload,
-        existingFallback
-          ? { page_name: existingFallback.page_name, section_name: existingFallback.section_name, title: existingFallback.title, content: existingFallback.content, image_url: existingFallback.image_url, updated_at: existingFallback.updated_at }
-          : null
+        existingFallback ? { page_name: existingFallback.page_name, section_name: existingFallback.section_name, title: existingFallback.title, content: existingFallback.content, image_url: existingFallback.image_url, updated_at: existingFallback.updated_at } : previousData
       );
-      return res.json(saved);
     }
 
-    const { data, error } = await supabase.from('page_sections').upsert({ id, ...rowPayload }, { onConflict: 'id' }).select('*').single();
-    if (error) throw error;
-    res.json(normalizeRow(data));
+    // SPECIAL SYNC: If saving "Home Page -> About the University", also sync key 'home' in website_content
+    if (String(resolvedPageName).toLowerCase() === 'home page' && String(resolvedSectionName).toLowerCase() === 'about the university') {
+      try {
+        const aboutObj = typeof contentValue === 'object' ? contentValue : {};
+        const homeContentPayload = {
+          title: aboutObj.smallHeading || aboutObj.title || 'ABOUT THE UNIVERSITY',
+          subtitle: aboutObj.mainHeading || aboutObj.subtitle || 'Viveka College — Flexible, Recognized, Career-Focused',
+          description: aboutObj.description ?? '',
+          additionalDescription: aboutObj.additionalDescription ?? aboutObj.additional_description ?? '',
+          cta1Text: aboutObj.buttonText || aboutObj.button_text || 'Learn More About Us',
+          cta1Url: aboutObj.buttonLink || aboutObj.button_link || '/about',
+          mediaUrl: aboutObj.mediaUrl || aboutObj.media_url || resolvedImageUrl || '/collegeimage.png',
+          mediaType: aboutObj.mediaType || aboutObj.media_type || 'image',
+          mediaSettings: aboutObj.mediaSettings || aboutObj.media_settings || {},
+          quoteEnabled: aboutObj.quoteEnabled ?? true,
+          quoteText: aboutObj.quoteText || 'Distance learning that builds careers and community futures',
+          quoteAuthor: aboutObj.quoteAuthor || '— Viveka College',
+          quoteBgColor: aboutObj.quoteBgColor || '',
+          quoteTextColor: aboutObj.quoteTextColor || '',
+          updated_at: new Date().toISOString(),
+        };
+        await supabase.from('website_content').upsert({
+          key: 'home',
+          content: homeContentPayload,
+          updated_by: req.admin?.id || null
+        }, { onConflict: 'key' });
+      } catch (syncErr) {
+        console.error('Error syncing home content from page_sections:', syncErr);
+      }
+    }
+
+    res.json(savedResult);
   } catch (error) {
     next(error);
   }

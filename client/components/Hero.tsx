@@ -189,11 +189,7 @@ const Hero = () => {
                 </div>
             </div>
 
-            {/* Decorative Elements */}
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 animate-bounce opacity-50">
-                <span className="text-cream text-[10px] tracking-[0.2em] font-sans uppercase">Scroll to Discover</span>
-                <div className="w-px h-12 bg-cream/30"></div>
-            </div>
+
 
             <style jsx>{`
         @keyframes fadeIn {

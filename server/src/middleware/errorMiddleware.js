@@ -5,6 +5,9 @@ const notFound = (req, res, next) => {
 };
 
 const errorHandler = (error, req, res, next) => {
+    if (res.headersSent) {
+        return next(error);
+    }
     console.error('API Error:', error);
     const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
     res.status(statusCode).json({

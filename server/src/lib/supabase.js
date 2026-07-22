@@ -10,9 +10,8 @@ const getSupabaseCredentials = () => {
 
 const getSupabaseAdminClient = () => {
     const { url, serviceKey, anonKey } = getSupabaseCredentials();
-    // Use service role key for the admin/backend client so it can bypass RLS for writes.
-    // Fall back to anon key only if service role key is not set.
-    const key = serviceKey || anonKey;
+    // Use service role key if it's a valid Supabase JWT (starts with eyJ), otherwise fallback to anonKey
+    const key = (serviceKey && serviceKey.startsWith('eyJ')) ? serviceKey : (anonKey || serviceKey);
     if (!url || !key) return null;
 
     return createClient(url, key, {
