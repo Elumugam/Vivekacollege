@@ -12,10 +12,11 @@ const protect = async (req, res, next) => {
         const token = authorization.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'viveka-secret');
 
-        // Check fallback / demo admin IDs first
-        if (decoded.id === 'admin-default-id' || decoded.id === 'default-admin-id' || decoded.id === 'demo-admin-id') {
+        // Check fallback / demo admin IDs first (includes legacy string IDs + new fixed UUID)
+        const FALLBACK_ADMIN_IDS = ['admin-default-id', 'default-admin-id', 'demo-admin-id', '00000000-0000-0000-0000-000000000001'];
+        if (FALLBACK_ADMIN_IDS.includes(decoded.id)) {
             req.admin = {
-                id: decoded.id,
+                id: '00000000-0000-0000-0000-000000000001',
                 name: 'System Admin',
                 email: process.env.ADMIN_EMAIL || 'admin@vivekacollege.edu',
                 role: 'admin',

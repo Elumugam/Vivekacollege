@@ -54,6 +54,7 @@ app.use('/api/hero-settings', require('./src/routes/heroSettingsRoutes'));
 app.use('/api/dashboard', require('./src/routes/dashboardRoutes'));
 app.use('/api/upload', require('./src/routes/uploadRoutes'));
 app.use('/api/media', require('./src/routes/mediaRoutes'));
+app.use('/api/footer', require('./src/routes/footerRoutes'));
 
 app.get('/api', (req, res) => {
     res.json({ message: 'Welcome to Viveka College API' });

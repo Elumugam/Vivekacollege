@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { apiJson } from "@/lib/api";
 import { inp, ta, Field, SaveBtn, UploadBtn, MediaPreview, SectionHeader } from "./CmsHelpers";
+import FooterManagement from "./FooterManagement";
 
 const removeIfExists = async (bucket: string, url: string, token: string) => {
   if (!url) return;
@@ -385,6 +386,7 @@ export function HomeContentTab(props: {
       <NavbarTab data={navbar} token={token} onChange={onNavbarChange} onSave={onSave} />
       <HomeTab data={home} token={token} onChange={onHomeChange} onSave={onSave} />
       <ContactInfoTab data={contactInfo} onChange={onContactInfoChange} onSave={onSave} />
+      <FooterManagement token={token} />
     </div>
   );
 }

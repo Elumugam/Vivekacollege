@@ -61,10 +61,13 @@ const saveContent = async (req, res, next) => {
         }
 
         const key = req.params.key;
+        // Only pass a real UUID for updated_by — fallback admin IDs like "admin-default-id" are not valid UUIDs
+        const adminId = req.admin?.id || null;
+        const isValidUuid = adminId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(adminId);
         const payload = {
             key,
             content: req.body.content ?? req.body,
-            updated_by: req.admin?.id || null,
+            updated_by: isValidUuid ? adminId : null,
         };
 
         const { data, error } = await supabase.from('website_content').upsert(payload, { onConflict: 'key' }).select('*').single();

@@ -9,10 +9,13 @@ const getSupabaseCredentials = () => {
 };
 
 const getSupabaseAdminClient = () => {
-    const { url, anonKey } = getSupabaseCredentials();
-    if (!url || !anonKey) return null;
+    const { url, serviceKey, anonKey } = getSupabaseCredentials();
+    // Use service role key for the admin/backend client so it can bypass RLS for writes.
+    // Fall back to anon key only if service role key is not set.
+    const key = serviceKey || anonKey;
+    if (!url || !key) return null;
 
-    return createClient(url, anonKey, {
+    return createClient(url, key, {
         auth: { persistSession: false, autoRefreshToken: false },
         global: {
             fetch: (...args) => {

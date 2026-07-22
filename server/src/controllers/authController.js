@@ -43,7 +43,7 @@ const loginAdmin = async (req, res, next) => {
 
             if (isDefaultAdmin) {
                 admin = {
-                    id: 'admin-default-id',
+                    id: '00000000-0000-0000-0000-000000000001',  // fixed UUID for fallback system admin
                     name: 'System Admin',
                     email: normalizedEmail,
                     role: 'admin',

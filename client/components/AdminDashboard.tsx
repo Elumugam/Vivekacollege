@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Trash2 } from "lucide-react";
+import { Trash2, Download } from "lucide-react";
 import { apiJson } from "@/lib/api";
 import { courseCatalog, galleryItems } from "@/lib/site-data";
 import { HomeContentTab, AboutTab } from "./cms/ContentTabs";
@@ -13,6 +13,7 @@ import PageSections from "./cms/PageSections";
 import AnnouncementBarAdmin from "./cms/AnnouncementBarAdmin";
 import PopupsTab from "./cms/PopupsTab";
 import HeaderManagement from "./cms/HeaderManagement";
+import { exportApplicationsPdf, exportApplicationsXlsx } from "@/utils/applicationExport";
 
 type Tab = "overview" | "home" | "header" | "about" | "courses" | "gallery" | "contacts" | "applications" | "media" | "sections" | "announcement" | "popups";
 
@@ -77,6 +78,8 @@ export default function AdminDashboard() {
   const [applicationsError, setApplicationsError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ kind: "application" | "contact"; id: string } | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const authH = useCallback((t: string) => ({ Authorization: `Bearer ${t}` }), []);
 
@@ -364,62 +367,167 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {tab === "applications" && (
-            <div className="overflow-x-auto">
-              <div className="mb-6 border-b border-cream-dark pb-4">
-                <h2 className="font-serif text-2xl font-bold text-navy">Applications</h2>
-                <p className="mt-1 text-sm text-gray-500">{applications.length} records</p>
+          {tab === "applications" && (() => {
+            const allIds = applications.map((r: any) => String(r.id));
+            const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+            const someSelected = allIds.some((id) => selectedIds.has(id));
+            const toggleAll = () => {
+              if (allSelected) setSelectedIds(new Set());
+              else setSelectedIds(new Set(allIds));
+            };
+            const toggleOne = (id: string) => {
+              setSelectedIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id); else next.add(id);
+                return next;
+              });
+            };
+            const selectedRows = applications.filter((r: any) => selectedIds.has(String(r.id)));
+            return (
+              <div className="overflow-x-auto">
+                <div className="mb-6 border-b border-cream-dark pb-4">
+                  <h2 className="font-serif text-2xl font-bold text-navy">Applications</h2>
+                  <p className="mt-1 text-sm text-gray-500">{applications.length} records</p>
+                </div>
+                {applicationsLoading && <p className="mb-4 text-sm text-gray-500">Loading applications...</p>}
+                {applicationsError && <p className="mb-4 text-sm text-[#9a0827]">{applicationsError}</p>}
+
+                {/* ── Download toolbar ── */}
+                {!applicationsLoading && applications.length > 0 && (
+                  <div className="mb-4 flex flex-wrap items-center gap-2 rounded-sm border border-cream-dark bg-cream/50 px-4 py-3">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-navy mr-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                        onChange={toggleAll}
+                        className="h-4 w-4"
+                      />
+                      Select All
+                    </label>
+                    <button
+                      onClick={() => exportApplicationsPdf(applications, "all-applications.pdf")}
+                      className="inline-flex items-center gap-1.5 rounded-sm border border-[#072d5a] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#072d5a] hover:bg-[#072d5a] hover:text-white transition-colors"
+                    >
+                      <Download className="h-3.5 w-3.5" /> Download All (PDF)
+                    </button>
+                    <button
+                      onClick={() => exportApplicationsXlsx(applications, "all-applications.xlsx")}
+                      className="inline-flex items-center gap-1.5 rounded-sm border border-[#072d5a] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#072d5a] hover:bg-[#072d5a] hover:text-white transition-colors"
+                    >
+                      <Download className="h-3.5 w-3.5" /> Download All (Excel)
+                    </button>
+                    <button
+                      disabled={!someSelected}
+                      onClick={() => {
+                        if (!someSelected) return;
+                        exportApplicationsPdf(selectedRows, `selected-applications-${Date.now()}.pdf`);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-sm bg-[#9a0827] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white disabled:opacity-40 hover:bg-[#7f061f] transition-colors"
+                    >
+                      <Download className="h-3.5 w-3.5" /> Download Selected ({selectedRows.length})
+                    </button>
+                  </div>
+                )}
+
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead><tr className="bg-cream border-b border-cream-dark">
+                    <th className="p-3"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4" /></th>
+                    <th className="p-3 font-bold text-navy text-xs uppercase tracking-wider">Name</th>
+                    <th className="p-3 font-bold text-navy text-xs uppercase tracking-wider">Email</th>
+                    <th className="p-3 font-bold text-navy text-xs uppercase tracking-wider">Details</th>
+                    <th className="p-3 font-bold text-navy text-xs uppercase tracking-wider">Date</th>
+                    <th className="p-3 font-bold text-navy text-xs uppercase tracking-wider">Actions</th>
+                  </tr></thead>
+                  <tbody>
+                    {!applicationsLoading && applicationsError && applications.length === 0 && (
+                      <tr><td colSpan={6} className="p-8 text-center text-gray-400">Unable to load applications.</td></tr>
+                    )}
+                    {applications.map((r: any) => {
+                      const rid = String(r.id);
+                      const isOpen = openDropdownId === rid;
+                      return (
+                        <tr key={r.id} className={`border-b border-cream-dark hover:bg-cream/50 transition-colors ${selectedIds.has(rid) ? 'bg-blue-50/40' : ''}`}>
+                          <td className="p-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(rid)}
+                              onChange={() => toggleOne(rid)}
+                              className="h-4 w-4"
+                            />
+                          </td>
+                          <td className="p-3 font-semibold text-navy">{r.fullName || r.name}</td>
+                          <td className="p-3 text-gray-600">{r.email}</td>
+                          <td className="p-3 max-w-xs whitespace-normal text-gray-500">
+                            <div className="space-y-1">
+                              <p>{r.courseTitle || r.course || r.courseId}</p>
+                              <p>{r.courseType ? `Course Type: ${r.courseType}` : ''}</p>
+                              <p>{r.dob ? `DOB: ${r.dob}` : ''}</p>
+                              <p>{r.gender ? `Gender: ${r.gender}` : ''}</p>
+                              <p>{r.mobile || r.phone ? `Mobile: ${r.mobile || r.phone}` : ''}</p>
+                              <p>{r.address ? `Address: ${r.address}` : ''}</p>
+                              <p>{r.qualification ? `Qualification: ${r.qualification}` : ''}</p>
+                              <p>{Array.isArray(r.documents) && r.documents.length ? `Documents: ${r.documents.map((document: any) => document.originalName || document.fileName || document.filePath).filter(Boolean).join(', ')}` : ''}</p>
+                            </div>
+                          </td>
+                          <td className="p-3 text-gray-400 text-xs">{new Date(r.created_at||0).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})}</td>
+                          <td className="p-3">
+                            <div className="flex flex-wrap gap-2">
+                              {/* Delete button – unchanged */}
+                              <button
+                                type="button"
+                                onClick={() => promptDelete("application", rid)}
+                                className="inline-flex items-center gap-2 rounded-sm border border-[#9a0827] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a0827] transition-colors hover:bg-[#9a0827] hover:text-white"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Delete
+                              </button>
+                              {/* Download dropdown */}
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenDropdownId(isOpen ? null : rid)}
+                                  className="inline-flex items-center gap-2 rounded-sm border border-[#072d5a] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#072d5a] transition-colors hover:bg-[#072d5a] hover:text-white"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  Download
+                                </button>
+                                {isOpen && (
+                                  <div className="absolute right-0 top-full z-30 mt-1 w-40 rounded-sm border border-cream-dark bg-white shadow-lg">
+                                    <button
+                                      className="w-full px-4 py-2.5 text-left text-xs font-semibold text-navy hover:bg-cream transition-colors"
+                                      onClick={() => {
+                                        exportApplicationsPdf([r], `application-${rid}.pdf`);
+                                        setOpenDropdownId(null);
+                                      }}
+                                    >
+                                      Download as PDF
+                                    </button>
+                                    <button
+                                      className="w-full px-4 py-2.5 text-left text-xs font-semibold text-navy hover:bg-cream transition-colors"
+                                      onClick={() => {
+                                        exportApplicationsXlsx([r], `application-${rid}.xlsx`);
+                                        setOpenDropdownId(null);
+                                      }}
+                                    >
+                                      Download as Excel
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {!applicationsLoading && applications.length === 0 && !applicationsError && (
+                      <tr><td colSpan={6} className="p-8 text-center text-gray-400">No records found.</td></tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-              {applicationsLoading && <p className="mb-4 text-sm text-gray-500">Loading applications...</p>}
-              {applicationsError && <p className="mb-4 text-sm text-[#9a0827]">{applicationsError}</p>}
-              <table className="w-full text-left border-collapse text-sm">
-                <thead><tr className="bg-cream border-b border-cream-dark">
-                  <th className="p-3 font-bold text-navy text-xs uppercase tracking-wider">Name</th>
-                  <th className="p-3 font-bold text-navy text-xs uppercase tracking-wider">Email</th>
-                  <th className="p-3 font-bold text-navy text-xs uppercase tracking-wider">Details</th>
-                  <th className="p-3 font-bold text-navy text-xs uppercase tracking-wider">Date</th>
-                  <th className="p-3 font-bold text-navy text-xs uppercase tracking-wider">Action</th>
-                </tr></thead>
-                <tbody>
-                  {!applicationsLoading && applicationsError && applications.length === 0 && (
-                    <tr><td colSpan={5} className="p-8 text-center text-gray-400">Unable to load applications.</td></tr>
-                  )}
-                  {applications.map((r: any) => (
-                    <tr key={r.id} className="border-b border-cream-dark hover:bg-cream/50 transition-colors">
-                      <td className="p-3 font-semibold text-navy">{r.fullName || r.name}</td>
-                      <td className="p-3 text-gray-600">{r.email}</td>
-                      <td className="p-3 max-w-xs whitespace-normal text-gray-500">
-                        <div className="space-y-1">
-                          <p>{r.courseTitle || r.course || r.courseId}</p>
-                          <p>{r.courseType ? `Course Type: ${r.courseType}` : ''}</p>
-                          <p>{r.dob ? `DOB: ${r.dob}` : ''}</p>
-                          <p>{r.gender ? `Gender: ${r.gender}` : ''}</p>
-                          <p>{r.mobile || r.phone ? `Mobile: ${r.mobile || r.phone}` : ''}</p>
-                          <p>{r.address ? `Address: ${r.address}` : ''}</p>
-                          <p>{r.qualification ? `Qualification: ${r.qualification}` : ''}</p>
-                          <p>{Array.isArray(r.documents) && r.documents.length ? `Documents: ${r.documents.map((document: any) => document.originalName || document.fileName || document.filePath).filter(Boolean).join(', ')}` : ''}</p>
-                        </div>
-                      </td>
-                      <td className="p-3 text-gray-400 text-xs">{new Date(r.created_at||0).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})}</td>
-                      <td className="p-3">
-                        <button
-                          type="button"
-                          onClick={() => promptDelete("application", String(r.id))}
-                          className="inline-flex items-center gap-2 rounded-sm border border-[#9a0827] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a0827] transition-colors hover:bg-[#9a0827] hover:text-white"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {!applicationsLoading && applications.length === 0 && !applicationsError && (
-                    <tr><td colSpan={5} className="p-8 text-center text-gray-400">No records found.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+            );
+          })()}
           </div>
         </div>
       </div>
